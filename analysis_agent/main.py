@@ -1,55 +1,36 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-from typing import List, Dict, Any
+from typing import Dict, List
 
 app = FastAPI()
 
-class StockInfo(BaseModel):
-    symbol: str
-    price: float
-    name: str
-    currency: str
-    sector: str
-    website: str
-
-class NewsArticle(BaseModel):
-    title: str
-    source: str
-    publishedAt: str
-    url: str
-
 class AnalysisRequest(BaseModel):
-    stock_info: StockInfo
-    news_info: Dict[str, List[NewsArticle]]
+    historical_prices: Dict[str, float]
+    current_price: float
+    sector: str
+    news_headlines: List[str]
 
-@app.post("/analyze-data")
-def analyze_data(request: AnalysisRequest):
-    stock = request.stock_info
-    news = request.news_info.get("top_news", [])
+@app.post("/analyze")
+def analyze(request: AnalysisRequest):
+    prices = list(request.historical_prices.values())
 
-    # Basic sentiment logic
-    positive_words = ["gain", "growth", "strong", "profit", "surge"]
-    negative_words = ["loss", "decline", "weak", "fall", "drop"]
+    if not prices:
+        return {"error": "No historical prices provided."}
 
-    score = 0
-    for article in news:
-        title = article.title.lower()
-        for word in positive_words:
-            if word in title:
-                score += 1
-        for word in negative_words:
-            if word in title:
-                score -= 1
+    # Basic price change analysis
+    price_change = round(((request.current_price - prices[0]) / prices[0]) * 100, 2)
 
-    sentiment = "Neutral"
-    if score > 1:
-        sentiment = "Positive"
-    elif score < -1:
-        sentiment = "Negative"
+    # Basic news summarization (stub)
+    headline_summary = " | ".join(request.news_headlines[:3])
+
+    # Basic recommendation logic
+    recommendation = (
+        "Hold" if -2 <= price_change <= 2 else ("Buy" if price_change < -2 else "Sell")
+    )
 
     return {
-        "summary": f"{stock.name} ({stock.symbol}) in {stock.sector} sector",
-        "sentiment": sentiment,
-        "sentiment_score": score,
-        "articles_analyzed": len(news)
+        "price_trend": f"{price_change}% over last 5 days",
+        "sector": request.sector,
+        "latest_news": headline_summary,
+        "recommendation": recommendation,
     }

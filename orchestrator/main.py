@@ -1,46 +1,27 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException
 import requests
+from pydantic import BaseModel
 
 app = FastAPI()
 
-class QueryRequest(BaseModel):
+class Query(BaseModel):
     query: str
 
-@app.post("/analyze")
-def analyze_data(request: QueryRequest):
-    query = request.query
+@app.post("/orchestrate")
+def orchestrate(query: Query):
     try:
-        # Stock data
-        stock_res = requests.post("http://127.0.0.1:8001/fetch-data", json={"query": query})
-        stock_res.raise_for_status()
-        stock_data = stock_res.json()
+        stock_data = requests.post("http://localhost:8001/fetch-data", json={"query": query.query}).json()
+        news_data = requests.post("http://localhost:8002/fetch-news", json={"query": query.query}).json()
+        analysis_data = requests.post("http://localhost:8003/analyze", json={
+            "stock_data": stock_data,
+            "news_data": news_data
+        }).json()
 
-        # News data
-        news_res = requests.post("http://127.0.0.1:8002/get-news", json={"query": query})
-        news_res.raise_for_status()
-        news_data = news_res.json()
+        return {
+            "stock": stock_data,
+            "news": news_data,
+            "analysis": analysis_data
+        }
 
-        # Analysis
-        analysis_res = requests.post("http://127.0.0.1:8003/analyze-data", json={
-            "stock_info": stock_data,
-            "news_info": news_data
-        })
-        analysis_res.raise_for_status()
-        analysis_data = analysis_res.json()
-
-        # Language agent to summarize everything
-        language_res = requests.post("http://127.0.0.1:8004/summarize", json={
-            "stock_info": stock_data,
-            "news_info": news_data,
-            "insight": analysis_data.get("sentiment", "")
-        })
-        language_res.raise_for_status()
-        language_data = language_res.json()
-
-        return language_data  # ✅ this will contain the "response" key
-
-    except requests.exceptions.RequestException as e:
-        return {"error": f"Request failed: {e}"}
     except Exception as e:
-        return {"error": f"Unexpected error: {e}"}
+        raise HTTPException(status_code=500, detail=f"Internal orchestrator error: {str(e)}")

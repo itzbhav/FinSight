@@ -1,0 +1,5 @@
+[
+  { "text": "Tesla reported Q1 2025 earnings of $3.1B, beating expectations.", "source": "tesla_10q.txt" },
+  { "text": "Apple launched a new buyback program worth $90B.", "source": "apple_news_2025.txt" },
+  { "text": "Goldman Sachs expects rate cuts in late 2025.", "source": "fed_outlook.txt" }
+]

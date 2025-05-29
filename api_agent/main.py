@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException 
 from pydantic import BaseModel
 import yfinance as yf
 
@@ -10,19 +10,20 @@ class StockRequest(BaseModel):
 @app.post("/fetch-data")
 def fetch_stock_data(request: StockRequest):
     try:
-        ticker = yf.Ticker(request.query)
+        query = request.query.strip().upper()
+        ticker = yf.Ticker(query)
         data = ticker.info
-        
-        # Basic validation
-        if "currentPrice" not in data:
+
+        # Check if ticker is valid
+        if "currentPrice" not in data or data.get("quoteType") != "EQUITY":
             raise HTTPException(status_code=404, detail="Stock data not found")
-        
+
         # Fetch historical closing prices (last 5 days)
         hist = ticker.history(period="5d")
         historical_prices = hist['Close'].round(2).to_dict()
-        
+
         return {
-            "symbol": request.query.upper(),
+            "symbol": query,
             "price": data.get("currentPrice"),
             "name": data.get("longName"),
             "currency": data.get("currency"),
@@ -30,5 +31,6 @@ def fetch_stock_data(request: StockRequest):
             "website": data.get("website"),
             "historical_prices": historical_prices,
         }
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching stock data: {str(e)}")

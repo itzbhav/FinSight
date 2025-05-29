@@ -1,14 +1,27 @@
 import streamlit as st
 import requests
 
-st.title("🧠 AI Financial Assistant")
+st.set_page_config(page_title="FinSight Orchestrator", layout="centered")
+st.title("🤖 FinSight: AI-Powered Market Analyzer")
 
-query = st.text_input("Enter stock ticker (e.g., AAPL)")
+query = st.text_input("Enter a company name", "")
 
-if st.button("Analyze"):
-    res = requests.post("http://127.0.0.1:8000/analyze", json={"query": query})
-    if res.status_code == 200:
-        data = res.json()
-        st.success(data.get("response", "No summary returned"))
-    else:
-        st.error("Failed to get response from orchestrator.")
+if st.button("Analyze") and query:
+    with st.spinner("Fetching and analyzing data..."):
+        try:
+            response = requests.post("http://localhost:8000/orchestrate", json={"query": query})
+            response.raise_for_status()
+            data = response.json()
+
+            st.subheader("📊 Stock Data")
+            st.json(data["stock"])
+
+            st.subheader("📰 News Headlines")
+            for article in data["news"]:
+                st.markdown(f"- {article['title']}")
+
+            st.subheader("📈 AI Analysis")
+            st.json(data["analysis"])
+
+        except requests.exceptions.RequestException as e:
+            st.error(f"Request failed: {e}")
